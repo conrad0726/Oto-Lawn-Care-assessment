@@ -1,32 +1,48 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Device } from './src/models/types';
+import DashboardScreen from './src/screens/DashboardScreen';
+import DeviceDetailScreen from './src/screens/DeviceDetailScreen';
+
+type Screen = { name: 'dashboard' } | { name: 'device'; deviceId: string };
 
 export default function App() {
+  const [screen, setScreen] = useState<Screen>({ name: 'dashboard' });
+
+  function handleSelectDevice(device: Device) {
+    setScreen({ name: 'device', deviceId: device.id });
+  }
+
+  function handleBack() {
+    setScreen({ name: 'dashboard' });
+  }
+
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
-      <Text style={styles.title}>OtO React Native Interview</Text>
-      <Text style={styles.subtitle}>Build your solution here.</Text>
+    <View style={styles.outer}>
+      <View style={styles.root}>
+        <StatusBar style="light" />
+        {screen.name === 'dashboard' && (
+          <DashboardScreen onSelectDevice={handleSelectDevice} />
+        )}
+        {screen.name === 'device' && (
+          <DeviceDetailScreen deviceId={screen.deviceId} onBack={handleBack} />
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  outer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#e8f5e9',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1c2430',
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 16,
-    color: '#5a6575',
+  root: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 480,
+    overflow: 'hidden',
   },
 });
