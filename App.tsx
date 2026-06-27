@@ -1,9 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Provider } from 'react-redux';
 import { Device } from './src/models/types';
 import DashboardScreen from './src/screens/DashboardScreen';
 import DeviceDetailScreen from './src/screens/DeviceDetailScreen';
+import { store } from './src/store/store';
 
 type Screen = { name: 'dashboard' } | { name: 'device'; deviceId: string };
 
@@ -19,17 +21,19 @@ export default function App() {
   }
 
   return (
-    <View style={styles.outer}>
-      <View style={styles.root}>
-        <StatusBar style="light" />
-        {screen.name === 'dashboard' && (
-          <DashboardScreen onSelectDevice={handleSelectDevice} />
-        )}
-        {screen.name === 'device' && (
-          <DeviceDetailScreen deviceId={screen.deviceId} onBack={handleBack} />
-        )}
+    <Provider store={store}>
+      <View style={styles.outer}>
+        <View style={styles.root}>
+          <StatusBar style="light" />
+          {screen.name === 'dashboard' && (
+            <DashboardScreen onSelectDevice={handleSelectDevice} />
+          )}
+          {screen.name === 'device' && (
+            <DeviceDetailScreen deviceId={screen.deviceId} onBack={handleBack} />
+          )}
+        </View>
       </View>
-    </View>
+    </Provider>
   );
 }
 

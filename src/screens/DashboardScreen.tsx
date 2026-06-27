@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -7,36 +7,31 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getAccount, getDevices } from '../api/client';
-import { Account, Device } from '../models/types';
+import { Device } from '../models/types';
+import { getErrorMessage, useGetAccountQuery, useGetDevicesQuery } from '../store/api';
 
 type Props = {
   onSelectDevice: (device: Device) => void;
 };
 
 export default function DashboardScreen({ onSelectDevice }: Props) {
-  const [account, setAccount] = useState<Account | null>(null);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: account,
+    isLoading: accountLoading,
+    isError: accountError,
+    error: accountErr,
+  } = useGetAccountQuery('account-1');
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [acc, devs] = await Promise.all([
-          getAccount('account-1'),
-          getDevices('account-1'),
-        ]);
-        setAccount(acc);
-        setDevices(devs);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Something went wrong');
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+  const {
+    data: devices,
+    isLoading: devicesLoading,
+    isError: devicesError,
+    error: devicesErr,
+  } = useGetDevicesQuery('account-1');
+
+  const loading = accountLoading || devicesLoading;
+  const hasError = accountError || devicesError;
+  const errorMsg = getErrorMessage(accountErr ?? devicesErr);
 
   if (loading) {
     return (
@@ -47,10 +42,10 @@ export default function DashboardScreen({ onSelectDevice }: Props) {
     );
   }
 
-  if (error) {
+  if (hasError) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>⚠ {error}</Text>
+        <Text style={styles.errorText}>⚠ {errorMsg}</Text>
       </View>
     );
   }
@@ -65,7 +60,7 @@ export default function DashboardScreen({ onSelectDevice }: Props) {
       <Text style={styles.sectionTitle}>My Devices</Text>
 
       <FlatList
-        data={devices}
+        data={devices ?? []}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const isOffline = item.connectivity === 'offline';

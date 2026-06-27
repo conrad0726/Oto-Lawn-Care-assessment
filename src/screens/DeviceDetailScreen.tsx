@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -8,8 +8,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getDevice, getZones, updateDevice } from '../api/client';
-import { Device, DeviceZone } from '../models/types';
+import {
+  getErrorMessage,
+  useGetDeviceQuery,
+  useGetZonesQuery,
+  useUpdateDeviceMutation,
+} from '../store/api';
 
 type Props = {
   deviceId: string;
@@ -17,55 +21,43 @@ type Props = {
 };
 
 export default function DeviceDetailScreen({ deviceId, onBack }: Props) {
-  const [device, setDevice] = useState<Device | null>(null);
-  const [zones, setZones] = useState<DeviceZone[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: device,
+    isLoading: deviceLoading,
+    isError: deviceError,
+    error: deviceErr,
+  } = useGetDeviceQuery(deviceId);
+
+  const { data: zones = [], isLoading: zonesLoading } = useGetZonesQuery(deviceId);
+
+  const [updateDevice, { isLoading: renaming, error: renameErr, reset: resetMutation }] =
+    useUpdateDeviceMutation();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
-  const [renaming, setRenaming] = useState(false);
-  const [renameError, setRenameError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [dev, zns] = await Promise.all([getDevice(deviceId), getZones(deviceId)]);
-        setDevice(dev);
-        setZones(zns);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Something went wrong');
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [deviceId]);
+  const loading = deviceLoading || zonesLoading;
+  const renameError = renameErr ? getErrorMessage(renameErr) : null;
 
   async function handleRename() {
-    if (!device || !editName.trim()) return;
-    setRenaming(true);
-    setRenameError(null);
+    if (!editName.trim()) return;
     try {
-      const updated = await updateDevice(device.id, { name: editName.trim() });
-      setDevice(updated);
+      await updateDevice({ deviceId, name: editName.trim() }).unwrap();
       setIsEditing(false);
-    } catch (e: unknown) {
-      setRenameError(e instanceof Error ? e.message : 'Rename failed. Please try again.');
-    } finally {
-      setRenaming(false);
+    } catch {
+      // error surfaced via renameError
     }
   }
 
   function startEditing() {
+    resetMutation();
     setEditName(device?.name ?? '');
-    setRenameError(null);
     setIsEditing(true);
   }
 
   function cancelEditing() {
+    resetMutation();
     setIsEditing(false);
-    setRenameError(null);
   }
 
   if (loading) {
@@ -76,10 +68,10 @@ export default function DeviceDetailScreen({ deviceId, onBack }: Props) {
     );
   }
 
-  if (error || !device) {
+  if (deviceError || !device) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>⚠ {error ?? 'Device not found'}</Text>
+        <Text style={styles.errorText}>⚠ {getErrorMessage(deviceErr) || 'Device not found'}</Text>
         <TouchableOpacity onPress={onBack} style={styles.backBtnStandalone}>
           <Text style={styles.backBtnStandaloneText}>← Go Back</Text>
         </TouchableOpacity>
